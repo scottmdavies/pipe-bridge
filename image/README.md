@@ -1,12 +1,23 @@
 # README
 
+Schematic for testing OpenCV Template Matching - Python script
+
+Schematic features:
++ 9 number of different component symbols
++ Coloured connectors (wires) between symbols
++ Drawing reference number in bottom right
+
+
 ## Todo:
 
 - [x] upload example technical diagram
 - [x] include source and summary of drawing symbols
+- [ ] determine test procedure for OpenCV Template Matching - Python script
 
 
-## Wah-Wah Pedal Schematic
+## Dunlop Cry Baby GCB-95 schematic
+
+Dunlop Cry Baby GCB-95 schematic
 
 Source : https://www.electrosmash.com/crybaby-gcb-95
 
@@ -23,6 +34,7 @@ R | 10
 VR | 1
 IO Jack | 1
 True Bypass Switch | 1
+__9__ | __29__ 
 
 
 ### BOM Detailed Component List
