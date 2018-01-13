@@ -28,11 +28,11 @@ R | 10
 VR | 1
 IO Jack | 1
 True Bypass Switch | 1
-__9__ | __29__ 
+__&Sigma;= 9__ | __&Sigma;= 29__ 
 +9V | 4
 Ground | 11
 Junction (Dots) | 17
-__3__ | __32__ 
+__&Sigma;= 3__ | __&Sigma;= 32__ 
 
 
 ### BOM Detailed Component List
