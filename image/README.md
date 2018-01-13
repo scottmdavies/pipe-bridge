@@ -1,8 +1,13 @@
-# ReadMe
+# README
 
-Wah-Wah Pedal Schematic
+## Todo:
 
-https://www.electrosmash.com/crybaby-gcb-95
+- [ ] this is a complete item
+- [ ] this is an incomplete item
+
+## Wah-Wah Pedal Schematic
+
+Source : https://www.electrosmash.com/crybaby-gcb-95
 
 # Bill of Materials
 
