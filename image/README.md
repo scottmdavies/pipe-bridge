@@ -8,17 +8,9 @@ Schematic features:
 + Coloured connectors (wires) between symbols
 + Drawing reference number in bottom right
 
-
-## Todo:
-
-- [x] upload example technical diagram
-- [x] include source and summary of drawing symbols
-- [ ] determine test procedure for OpenCV Template Matching - Python script
-
-
 ## Dunlop Cry Baby GCB-95 schematic
 
-Dunlop Cry Baby GCB-95 schematic
+![Dunlop Cry Baby GCB-95 schematic](cry-baby-wah-gcb-95-schematic.png?raw=true "Optional Title")
 
 Source : https://www.electrosmash.com/crybaby-gcb-95
 
@@ -72,3 +64,9 @@ VR1 | 100KΩ
 Input/Output Jack Connector |
 True Bypass Switch|
 
+
+## Todo:
+
+- [x] upload example technical diagram
+- [x] include source and summary of drawing symbols
+- [ ] determine test procedure for OpenCV Template Matching - Python script
