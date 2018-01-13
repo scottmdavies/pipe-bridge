@@ -23,7 +23,8 @@ https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/
 + Keypoint matching recommended to match rotated objects of unknown orientation
   + High computational expense of looping over rotations (5&deg; increments)
   + Rotation of template sybmols on technical drawings possible only likely to be transformed 0, 90, 270&deg;
-
++ __Recommended__ : Scale image to 600-800 pixels on largest dimension
++ __Recommended__ : CCOEFF
 
 https://www.pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
 
