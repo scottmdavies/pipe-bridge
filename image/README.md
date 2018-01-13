@@ -69,6 +69,11 @@ VR1 | 100KΩ
 Input/Output Jack Connector |
 True Bypass Switch|
 
+## References:
+
+![Schmatic comparison](https://electronics.stackexchange.com/questions/105136/whats-a-schematic-compared-to-other-diagrams)
+![Rules for drawing Schematics](https://electronics.stackexchange.com/questions/28251/rules-and-guidelines-for-drawing-good-schematics)
+
 
 ## Todo:
 
