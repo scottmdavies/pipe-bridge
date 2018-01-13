@@ -71,8 +71,8 @@ True Bypass Switch|
 
 ## References:
 
-![Schmatic comparison](https://electronics.stackexchange.com/questions/105136/whats-a-schematic-compared-to-other-diagrams)
-![Rules for drawing Schematics](https://electronics.stackexchange.com/questions/28251/rules-and-guidelines-for-drawing-good-schematics)
++ ![Schmatic comparison](https://electronics.stackexchange.com/questions/105136/whats-a-schematic-compared-to-other-diagrams)
++ ![Rules for drawing Schematics](https://electronics.stackexchange.com/questions/28251/rules-and-guidelines-for-drawing-good-schematics)
 
 
 ## Todo:
