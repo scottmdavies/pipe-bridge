@@ -2,8 +2,8 @@
 
 ## Todo:
 
-- [ x ] upload example technical diagram
-- [ x ] include source and summary of drawing symbols
+- [x] upload example technical diagram
+- [x] include source and summary of drawing symbols
 
 
 ## Wah-Wah Pedal Schematic
