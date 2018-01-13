@@ -2,16 +2,15 @@
 
 ## Todo:
 
-- [ ] this is a complete item
-- [ ] this is an incomplete item
+- [ x ] upload example technical diagram
+- [ x ] include source and summary of drawing symbols
+
 
 ## Wah-Wah Pedal Schematic
 
 Source : https://www.electrosmash.com/crybaby-gcb-95
 
-# Bill of Materials
-
-## Summary
+### Bill of Materials (BOM) Summary
 
 Component | Quantity
 ------------ | -------------
@@ -26,7 +25,8 @@ IO Jack | 1
 True Bypass Switch | 1
 
 
-## Detailed Component List
+### BOM Detailed Component List
+
 Component | Type
 ------------ | -------------
 Q0 |  MPSA18
