@@ -3,7 +3,8 @@
 Schematic for testing OpenCV Template Matching - Python script
 
 Schematic features:
-+ 9 number of different component symbols
++ Total of 29 components (symbols)
++ Across 9 components types (symbols)
 + Coloured connectors (wires) between symbols
 + Drawing reference number in bottom right
 
