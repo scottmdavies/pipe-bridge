@@ -11,7 +11,7 @@ Schematic features:
 
 ## Dunlop Cry Baby GCB-95 schematic
 
-![Dunlop Cry Baby GCB-95 schematic](cry-baby-wah-gcb-95-schematic.png?raw=true "Optional Title")
+![Dunlop Cry Baby GCB-95 schematic](cry-baby-wah-gcb-95-schematic.png?raw=true "Original Schematic")
 
 Source : https://www.electrosmash.com/crybaby-gcb-95
 
@@ -68,6 +68,8 @@ R10 | 10KΩ
 VR1 | 100KΩ
 Input/Output Jack Connector |
 True Bypass Switch|
+
+![Dunlop Cry Baby GCB-95 schematic with highlighted symbols](cry-baby-wah-gcb-95-schematic-gridlines.png?raw=true "Marked-up Schematic")
 
 ## References:
 
