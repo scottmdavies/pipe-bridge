@@ -37,37 +37,37 @@ __&Sigma;= 3__ | __&Sigma;= 32__
 
 ### BOM Detailed Component List
 
-Component | Type
------------- | -------------
-Q0 |  MPSA18
-Q1  | MPSA18
-Q2  | MPSA18
-Cin1 |  0.01uF
-Cin2 |  22pF
-C1 |  0.01uF
-C2 |  0.01uF
-C3 |  4.7uF
-C4 |  0.22uF
-C5 |  0.22uF
-C6 |  220uF
-L1 |  500mH
-Rin1 |  2.2MΩ
-Rin2 |  1.8MΩ
-Rin3 |  1KΩ
-Rin4 |  10KΩ
-R1 |  68KΩ
-R2 |  1K5Ω
-R3 |  22KΩ
-R4 |  390Ω
-R5 |  470KΩ
-R6 |  470KΩ
-R7 |  33KΩ
-R8 |  82KΩ
-R9 |  1KΩ
-R10 | 10KΩ
-VR1 | 100KΩ
-Input/Output Jack Connector |
-True Bypass Switch|
+Component | Type | x | y | w | h
+--- | --- | --- | --- | --- | ---|
+Q0 |  MPSA18 | | | | |
+Q1  | MPSA18 | | | | |
+Q2  | MPSA18 | | | | |
+Cin1 |  0.01uF | | | | |
+Cin2 |  22pF | | | | |
+C1 |  0.01uF | | | | |
+C2 |  0.01uF | | | | |
+C3 |  4.7uF | | | | |
+C4 |  0.22uF | | | | |
+C5 |  0.22uF | | | | |
+C6 |  220uF | | | | |
+L1 |  500mH | | | | |
+Rin1 |  2.2MΩ | | | | |
+Rin2 |  1.8MΩ | | | | |
+Rin3 |  1KΩ | | | | |
+Rin4 |  10KΩ | | | | |
+R1 |  68KΩ | | | | |
+R2 |  1K5Ω | | | | |
+R3 |  22KΩ | | | | |
+R4 |  390Ω | | | | |
+R5 |  470KΩ | | | | |
+R6 |  470KΩ | | | | |
+R7 |  33KΩ | | | | |
+R8 |  82KΩ | | | | |
+R9 |  1KΩ | | | | |
+R10 | 10KΩ | | | | |
+VR1 | 100KΩ | | | | |
+Input/Output Jack Connector | | | | | |
+True Bypass Switch| | | | | |
 
 ![Dunlop Cry Baby GCB-95 schematic with highlighted symbols](cry-baby-wah-gcb-95-schematic-gridlines.png?raw=true "Marked-up Schematic")
 
