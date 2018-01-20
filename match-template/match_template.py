@@ -1,5 +1,6 @@
 #
 
+import os
 import time
 import argparse
 import cv2
@@ -11,8 +12,15 @@ parser.add_argument("-s", "--symbols", required=True, help="folder containing sy
 parser.add_argument("-d", "--drawings", required=False, help="drawings", type=str)
 args = parser.parse_args()
 
-print("[INFO] Symbols location: {}".format(args.symbols))
-print("[INFO] Drawings location: {}".format(args.drawings))
+if os.path.exists(args.symbols)== False:
+    print("[WARNING] Symbol drawing location: not found")
+    exit()
+print("[INFO] Symbol drawing location: {}".format(args.symbols))
+
+if os.path.exists(args.drawings)== False:
+    print("[WARNING] Cropped symbol location: not found")
+    exit()
+print("[INFO] Drawing location: {}".format(args.drawings))
 
 start = time.time()
 symbol_count = []
@@ -22,22 +30,25 @@ drawingpaths = list(paths.list_images(args.drawings))
 symbolpaths = list(paths.list_images(args.symbols))
 
 for d in drawingpaths:
-
+    print(d)
     drawing = cv2.imread(d)
     drawing_gray = cv2.cvtColor(drawing, cv2.COLOR_RGB2GRAY)
+    drawing_canny = cv2.Canny(drawing_gray, 50, 200)
     height, width, channels = drawing.shape
     blank_image = np.zeros((height, width, 3), np.uint8)
     
     for s in symbolpaths:
-        if symbol is None:
-            continue
+        print(s)
+
+        symbol = cv2.imread(s)
+        template_gray = cv2.cvtColor(symbol, cv2.COLOR_RGB2GRAY)
+        template_canny = cv2.Canny(template_gray, 50, 200)
         
-        template = cv2.cvtColor(symbol, cv2.COLOR_RGB2GRAY)
+        w, h = template_gray.shape[::-1]
+        # sliding window across drawing_canny removing previously detected break into columns
+        res = cv2.matchTemplate(drawing_canny,template_canny,cv2.TM_CCOEFF_NORMED)
         
-        w, h = template.shape[::-1]
-        res = cv2.matchTemplate(drawing_gray,template,cv2.TM_CCOEFF_NORMED)
-        
-        threshold = 0.8
+        threshold = 0.9
         loc = np.where( res >= threshold)
         for pt in zip(*loc[::-1]):
             cv2.rectangle(blank_image, pt, (pt[0] + w, pt[1] + h), (0,255,255), -1)
@@ -48,12 +59,14 @@ for d in drawingpaths:
         l = symbol_list.get(s,[])
         l.append(sym)
         symbol_list[s] = l
-    blend = cv2.addWeighted(drawing, 0.7, blank_image, 0.3, 0)
+
+
+
+        blend = cv2.addWeighted(drawing, 0.7, blank_image, 0.3, 0)
+
 
 print("[INFO] processed {} symbols in {:.2f} seconds".format(sum(symbol_count), time.time() - start))
 print("[INFO] processed {} drawings in {:.2f} seconds".format(len(drawingpaths), time.time() - start))
-
-print(symbol_list)
 
 cv2.namedWindow("Drawing", cv2.WINDOW_NORMAL)
 cv2.resizeWindow("Drawing", 500, 500)
