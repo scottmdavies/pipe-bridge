@@ -46,3 +46,8 @@ https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2
 + Lines indicating connections between symbols
 + Symbols potentially rotated at fixed angles
 + Connecting lines will run at 0 and 90&deg; to Y axis  
+
+
+## Flask
++ Send / Receive images via flask
+https://gist.github.com/kylehounslow/767fb72fde2ebdd010a0bf4242371594
