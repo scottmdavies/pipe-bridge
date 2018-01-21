@@ -18,8 +18,8 @@ Suitable Engineering Schematics:
 
 ### <a name="benefits"></a> Benefits:
 + Reduces schematic processing time from man-hours to seconds
-* Minimal configuration and training
-* Built-in support for batch processing multiple files in parallel
++ Minimal configuration and user training
++ Built-in support for batch processing multiple files in parallel
 
 ### <a name="features"></a> Features:
 + Scans schematic diagramss (.DWG and .PDF)
