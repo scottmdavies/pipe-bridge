@@ -14,14 +14,17 @@ The Schematic Diagram Processing Service uses new event-driven compute services,
 Suitable Engineering Schematics:
 + Electrical
 + Chemical / Process
++ Others...
 
 ### <a name="benefits"></a> Benefits:
 + Reduces schematic processing time from man-hours to seconds
 
 ### <a name="features"></a> Features:
-+ Scans schematics
++ Scans schematic diagramss (.DWG and .PDF)
 + Matches and identifies schematic symbols
-+ Returns list of identified symbols
++ Returns list of identified symbols, exportable to (.CSV and .XLS)
++ Identifies schematic symbol connections (wiring, pipework)
++ Export marked-up schematics (.PNG)
 
 ### <a name="platform"></a> Based on:
 + Python
