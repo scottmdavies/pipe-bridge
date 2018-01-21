@@ -14,15 +14,24 @@ The Schematic Diagram Processing Service uses new event-driven compute services,
 ### <a name="quick-start"></a> Quick Start
 
 1. __Upload Schematic Diagram:__
-  ```bash
-  npm install 
-  ```
 
-
+```
 Suitable Engineering Schematics:
 + Electrical
 + Chemical / Process
 + Others...
+```
+
+2. __Select Schematic Symbol:__
+
+
+3. __Review Schematic Symbols:__
+
+
+4. __Exporrt Schematic Symbol List:__
+
+
+
 
 ### <a name="benefits"></a> Benefits:
 + Reduces schematic processing time from man-hours to seconds
