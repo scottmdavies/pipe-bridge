@@ -4,19 +4,26 @@
 
 The Schematic Diagram Processing Service uses new event-driven compute services, like AWS Lambda to provide a scaleable and rapid response.  It's an on-line tool, providing symbol matching, bill of material (BOM) generation and best practices for consisntently analysing schematic diagrams.
 
-### Benefits:
+* [Quick Start](#quick-start)
+* [Benefits](#Benefits)
+* [Features](#features)
+* [Platform](#platform)
+
+### <a name="quick-start"></a> Quick Start
+
+Suitable Engineering Schematics:
++ Electrical
++ Chemical / Process
+
+### <a name="benefits"></a> Benefits:
 + Reduces schematic processing time from man-hours to seconds
 
-### Features:
+### <a name="features"></a> Features:
 + Scans schematics
 + Matches and identifies schematic symbols
 + Returns list of identified symbols
 
-### Suitable Engineering Schematics:
-+ Electrical
-+ Chemical / Process
-
-### Based on:
+### <a name="platform"></a> Based on:
 + Python
 + OpenCV
 + Flask
