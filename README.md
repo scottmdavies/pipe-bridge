@@ -1,6 +1,6 @@
 [![Pipe Bridge Schematic Processing Service](./assets/pipe-bridge-logo.png)]()
 
-[Website](http://) • [Docs](https://) • [Volunteer](https://)
+[Website](http://) • [Docs](https://) • [Support](https://)
 
 **Pipe Bridge - Schematic Diagram Processing Service** – Batch process schematic diagrams in seconds using a cloud based computer vision system. Engineers can be more productive as they no longer need to spend hours identifing and counting symbols on schematic diagrams. This enables your engineering team to focus on more technical challenges and not adminstrative tasks.
 
