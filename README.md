@@ -5,7 +5,7 @@
 The Schematic Diagram Processing Service uses new event-driven compute services, like AWS Lambda to provide a scaleable and rapid response.  It's an on-line tool, providing symbol matching, bill of material (BOM) generation and best practices for consisntently analysing schematic diagrams.
 
 * [Quick Start](#quick-start)
-* [Benefits](#Benefits)
+* [Benefits](#benefits)
 * [Features](#features)
 * [Platform](#platform)
 
