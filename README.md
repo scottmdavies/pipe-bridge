@@ -53,6 +53,6 @@ Suitable Engineering Schematics:
 + AWS Lambda
 + AWS S3
 
-
+> Standing on the Shoulder of Giants -- Isaac Newton
 
 
