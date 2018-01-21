@@ -46,6 +46,9 @@ Suitable Engineering Schematics:
 + Export marked-up schematics (.PNG)
 
 ### <a name="built-on"></a> Built On:
+
+> Standing on the Shoulder of Giants
+
 + Python
 + OpenCV
 + Flask
@@ -53,6 +56,6 @@ Suitable Engineering Schematics:
 + AWS Lambda
 + AWS S3
 
-> Standing on the Shoulder of Giants -- Isaac Newton
+
 
 
