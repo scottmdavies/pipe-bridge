@@ -9,7 +9,7 @@ The Schematic Diagram Processing Service uses new event-driven compute services,
 * [Quick Start](#quick-start)
 * [Benefits](#benefits)
 * [Features](#features)
-* [Platform](#platform)
+* [Built On](#built-on)
 
 ### <a name="quick-start"></a> Quick Start
 
@@ -45,7 +45,7 @@ Suitable Engineering Schematics:
 + Identifies schematic symbol connections (wiring, pipework)
 + Export marked-up schematics (.PNG)
 
-### <a name="platform"></a> Based on:
+### <a name="built-on"></a> Built On:
 + Python
 + OpenCV
 + Flask
