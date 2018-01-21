@@ -15,20 +15,26 @@ The Schematic Diagram Processing Service uses new event-driven compute services,
 
 1. __Upload Schematic Diagram:__
 
-```
+[![Pipe Bridge - Upload Schematic Screen](./assets/screen-home.png)]()
+
 Suitable Engineering Schematics:
 + Electrical
 + Chemical / Process
 + Others...
-```
+
 
 2. __Select Schematic Symbol:__
 
+[![Pipe Bridge - Select Symbol Screen](./assets/screen-schematic.png)]()
 
 3. __Review Schematic Symbols:__
 
+[![Pipe Bridge - Symbol List Screen](./assets/screen-symbol-list.png)]()
 
-4. __Exporrt Schematic Symbol List:__
+4. __Select Schematic Wiring:__
+
+[![Pipe Bridge - Select Wiring Screen](./assets/screen-wiring.png)]()
+
 
 
 
