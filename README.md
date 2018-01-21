@@ -1,4 +1,4 @@
-# pipe-bridge
+[![Pipe Bridge Schematic Processing Service](./assets/pipe-bridge-logo.png)]()
 
 __Cloud based schematic processing service__
 
