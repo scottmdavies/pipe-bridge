@@ -11,6 +11,12 @@ The Schematic Diagram Processing Service uses new event-driven compute services,
 
 ### <a name="quick-start"></a> Quick Start
 
+1. __Upload Schematic Diagram:__
+  ```bash
+  npm install 
+  ```
+
+
 Suitable Engineering Schematics:
 + Electrical
 + Chemical / Process
