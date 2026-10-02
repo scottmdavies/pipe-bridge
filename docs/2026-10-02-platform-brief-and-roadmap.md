@@ -75,7 +75,7 @@ pipe-bridge/
   apps/
     api/                    # FastAPI composition of the services
     gui/                    # NiceGUI front end (calls API)
-  examples/                 # sample projects (TOML + DEXPI)
+  examples/                 # sample projects (TOML + DXF)
   tests/  docs/  legacy/    # legacy = archived old Lambda app (or removed via git history)
 ```
 
