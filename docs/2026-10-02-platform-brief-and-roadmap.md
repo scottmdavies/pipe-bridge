@@ -128,3 +128,36 @@ recipes = "recipes/*.toml"
   agents calling the services as tools.
 
 Each phase ends with a demo project, tests, and documentation. Timings are indicative only.
+
+## 6. Priority update (2026-10-02): DXF extraction service first
+
+The first deliverable is a standalone **DXF unpacking service** (`pb_pid`, exposed via CLI and a FastAPI endpoint) that reads a DXF and emits a structured YAML (or JSON) document in two views:
+
+1. **Schedule of components** – one record per symbol/block instance: tag, type (block name), layer, position, rotation, attributes (size, rating, service, etc.), plus a summary count per type (a BOM/equipment/valve/instrument list).
+2. **Connection map** – graph of nodes (components) and edges (lines/polylines joining connection points), with line attributes (line number, size, spec) where present.
+
+Design notes:
+- Pipeline: `ezdxf` read -> classify entities (INSERT blocks, LINE/LWPOLYLINE, TEXT/MTEXT, attributes) by layer/block conventions -> attach nearby text to symbols/lines -> infer connectivity from endpoints within a tolerance, snapped to block connection points -> NetworkX graph -> serialise.
+- Output models are Pydantic (`pb_core`) so YAML, JSON and the API schema share one definition; versioned with a `schema_version` field. Write YAML with `ruamel.yaml` or PyYAML.
+- A TOML/YAML **mapping config** lets users declare layer names, block-to-type mapping and tolerances per client, since DXF conventions vary.
+- Emit warnings for unconnected nodes, dangling lines, and unrecognised blocks rather than failing.
+- Test with a few small hand-made DXFs (generated via `ezdxf`) and golden-file YAML comparisons.
+
+Sketch of output:
+```yaml
+schema_version: 1
+source: pid_001.dxf
+components:
+  - id: V-101
+    type: ball_valve
+    layer: VALVES
+    position: [120.5, 80.0]
+    attributes: {size: DN50}
+connections:
+  - from: T-101
+    to: V-101
+    line: L-001-DN50
+summary: {ball_valve: 4, tank: 2}
+```
+
+Revised near-term roadmap: Phase 0 (repo reset) -> **Phase 1a: DXF extract (components YAML)** -> **1b: connection map** -> 1c: API/CLI and mapping config -> then calculators, per the phases above, which consume this output.
