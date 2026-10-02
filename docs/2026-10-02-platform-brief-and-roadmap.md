@@ -161,3 +161,30 @@ summary: {ball_valve: 4, tank: 2}
 ```
 
 Revised near-term roadmap: Phase 0 (repo reset) -> **Phase 1a: DXF extract (components YAML)** -> **1b: connection map** -> 1c: API/CLI and mapping config -> then calculators, per the phases above, which consume this output.
+
+## 7. Additions (2026-10-02): DXF round-trip and equipment sizing
+
+### 7.1 DXF round-trip editing (`pb_pid`)
+`ezdxf` can write DXF, so the extraction service becomes two-way:
+- **Edit labels/attributes:** change `TEXT`/`MTEXT` strings and block attribute values (tag, size, service) on a *copy* of the source DXF.
+- **Add or swap parts without drawing:** insert an existing block from a symbol library (a template DXF or `ezdxf` Importer) at a position with attributes; swap a part by changing the block name.
+- **Change set model:** users edit the YAML (or submit a patch via the API); the service diffs it against the extracted graph and applies the changes to a new DXF. The original is never overwritten.
+- **Known limits:** moving a component requires updating connected pipe endpoints in the graph logic; text resizing/layout is ours to handle; exotic proxy entities may not round-trip; tag convention is needed to match edits to entities.
+- Roadmap: Phase 1d, after extraction (1a–1c).
+
+### 7.2 Equipment sizing service (`pb_sizing`)
+Worked example: sizing a **cooker**. The method generalises to any batch or semi-continuous equipment:
+1. **Demand:** product quantity per period (from orders/forecast/recipe, in TOML).
+2. **Schedule:** convert demand to batches using batch size and recipe step times (load, heat, hold, cook, unload, clean/CIP, changeover) to produce a production schedule.
+3. **Capacity test:** for N candidate units, simulate or solve the schedule and compute:
+   - **Utilisation** = busy time / available time (target typically below ~80–85% to leave headroom; configurable).
+   - **Waiting time/queueing** of batches (and of upstream/downstream blocking), makespan and on-time delivery.
+4. **Decision:** smallest N (and batch size) meeting utilisation and waiting-time targets; sensitivity to demand growth, downtime and shift pattern.
+
+Approach and dependencies:
+- **Pydantic** models for demand, recipe/step, equipment, shifts and targets; **TOML** inputs.
+- Start with a deterministic schedule/Gantt (OR-Tools CP-SAT or simple dispatch rules), then add **SimPy** discrete-event simulation with stochastic times/breakdowns for waiting-time distributions; **pandas**/numpy for KPIs; analytic queueing check (M/M/c, Erlang) as a quick sanity bound.
+- Output: YAML/JSON report (N units, utilisation, waiting, Gantt data) feeding costing and the P&ID component schedule (e.g. number of cookers to place).
+- Roadmap: merges with Phase 3 (recipes and scheduling); the sizing service is the first consumer, so build a **cooker case study** as the reference test with hand-checked numbers.
+
+Revised priority: 1a–1c DXF extraction → 1d round-trip edit → Phase 3 scheduling + sizing (cooker case) → calculators → CAD/costing.
