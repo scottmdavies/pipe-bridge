@@ -1,0 +1,27 @@
+name: Digital Workshop CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check digital_workshop tests
+      - name: Black
+        run: black --check digital_workshop tests
+      - name: Isort
+        run: isort --check-only digital_workshop tests
+      - name: Pytest with coverage (fails under 85%)
+        run: pytest
