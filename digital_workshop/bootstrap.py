@@ -8,6 +8,7 @@ from digital_workshop.config import Settings
 from digital_workshop.db.repositories import UnitOfWork
 from digital_workshop.db.session import create_db_engine, create_session_factory
 from digital_workshop.services.assets import AssetCreator
+from digital_workshop.services.dwg import DwgConverter
 from digital_workshop.services.dxf_parser import DxfParser
 from digital_workshop.services.graph import GraphBuilder
 from digital_workshop.services.relationships import (
@@ -42,5 +43,6 @@ def build_services(
         assets=AssetCreator(uow_factory, relationship_engine),
         graphs=GraphBuilder(),
         max_upload_bytes=settings.max_upload_bytes,
+        dwg_converter=DwgConverter(),
     )
     return workshop, SelectionService()

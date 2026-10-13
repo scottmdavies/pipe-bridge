@@ -1,63 +1,38 @@
-[![Pipe Bridge Schematic Processing Service](./assets/pipe-bridge-logo.png)]()
+# Pipe Bridge
 
-[Website](http://) • [Docs](https://) • [Support](https://)
+Engineering tools platform. The current MVP is the Briggs Digital Workshop (see [digital_workshop/README.md](digital_workshop/README.md)); direction is in [docs/](docs/2026-10-02-platform-brief-and-roadmap.md).
 
-**Pipe Bridge - Schematic Diagram Processing Service** – Batch process schematic diagrams in seconds using a cloud based computer vision system. Engineers can be more productive as they no longer need to spend hours identifing and counting symbols on schematic diagrams. This enables your engineering team to focus on more technical challenges and not adminstrative tasks.
+## Quick start (testing)
 
-The Schematic Diagram Processing Service uses new event-driven compute services, like AWS Lambda to provide a scaleable and rapid response.  It's an on-line tool, providing symbol matching, bill of material (BOM) generation and best practices for consisntently analysing schematic diagrams.
+**Docker (app + PostgreSQL, DWG support included):**
 
-* [Quick Start](#quick-start)
-* [Benefits](#benefits)
-* [Features](#features)
-* [Built On](#built-on)
+```bash
+docker compose up --build          # http://localhost:8080
+```
 
-### <a name="quick-start"></a> Quick Start
+**Dev container:** open in VS Code / Codespaces; it builds from the same [Dockerfile](Dockerfile), so
+`dwg2dxf` is available. Then:
 
-1. __Upload Schematic Diagram:__
+```bash
+DATABASE_URL="sqlite:///var/workshop.db" python -m digital_workshop   # http://localhost:8080
+```
 
-[![Pipe Bridge - Upload Schematic Screen](./assets/screen-home.png)]()
+**Plain Python (3.12+), no Docker:**
 
-2. __Select Schematic Symbol:__
+```bash
+pip install -e ".[dev]"
+DATABASE_URL="sqlite:///var/workshop.db" python -m digital_workshop
+```
 
-[![Pipe Bridge - Schematic Screen](./assets/screen-schematic.png)]()
+## DWG uploads
 
-[![Pipe Bridge - Select Symbol Screen](./assets/screen-symbol.png)]()
+DWG files are converted to DXF on upload with LibreDWG's `dwg2dxf`. It is a native tool, not a Python
+package: the [Dockerfile](Dockerfile) builds it from source (it is not in Debian), and both compose and
+the dev container use that Dockerfile. On a plain host, install it yourself and put it on `PATH`;
+otherwise DWG uploads are rejected with a message and DXF still works.
 
-3. __Review Schematic Symbols:__
+## Tests
 
-[![Pipe Bridge - Symbol List Screen](./assets/screen-symbol-list.png)]()
-
-4. __Select Schematic Wiring:__
-
-[![Pipe Bridge - Select Wiring Screen](./assets/screen-wiring.png)]()
-
-
-
-
-
-### <a name="benefits"></a> Benefits:
-+ Reduces schematic processing time from man-hours to seconds
-+ Minimal configuration and user training
-+ Built-in support for batch processing multiple files in parallel
-
-### <a name="features"></a> Features:
-+ Scans schematic diagramss (.DWG and .PDF)
-+ Matches and identifies schematic symbols
-+ Returns list of identified symbols, exportable to (.CSV and .XLS)
-+ Identifies schematic symbol connections (wiring, pipework)
-+ Export marked-up schematics (.PNG)
-
-### <a name="built-on"></a> Built On:
-
-> Standing on the Shoulder of Giants
-
-+ Python
-+ OpenCV
-+ Flask
-+ Serverless
-+ AWS Lambda
-+ AWS S3
-
-
-
-
+```bash
+pytest
+```

@@ -15,6 +15,7 @@ from digital_workshop.domain.models import (
     DrawingObject,
 )
 from digital_workshop.services.assets import AssetCreator
+from digital_workshop.services.dwg import DwgConversionError, DwgConverter, is_dwg
 from digital_workshop.services.dxf_parser import DxfParser
 from digital_workshop.services.graph import GraphBuilder
 from digital_workshop.services.storage import FileStore
@@ -40,6 +41,7 @@ class WorkshopService:
         assets: AssetCreator,
         graphs: GraphBuilder,
         max_upload_bytes: int,
+        dwg_converter: DwgConverter | None = None,
     ) -> None:
         """Create the service from injected collaborators."""
         self._uow_factory = uow_factory
@@ -49,19 +51,27 @@ class WorkshopService:
         self._assets = assets
         self._graphs = graphs
         self._max_upload_bytes = max_upload_bytes
+        self._dwg_converter = dwg_converter
 
     def import_drawing(
         self, filename: str, content: bytes, project_name: str = DEFAULT_PROJECT
     ) -> Drawing:
-        """Import a DXF: keep a read-only copy, extract metadata and objects, store them.
+        """Import a DXF (or DWG, converted first): keep a read-only copy, extract and store objects.
 
         Raises:
-            DrawingImportError: If the file is too large, empty or not a valid DXF.
+            DrawingImportError: If the file is too large, empty or not a valid DXF/DWG.
         """
         if not content:
             raise DrawingImportError("The uploaded file is empty.")
         if len(content) > self._max_upload_bytes:
             raise DrawingImportError("The uploaded file is too large.")
+        if is_dwg(content):
+            if self._dwg_converter is None:
+                raise DrawingImportError("DWG files are not supported; upload a DXF.")
+            try:
+                content = self._dwg_converter.convert(content)
+            except DwgConversionError as exc:
+                raise DrawingImportError(str(exc)) from exc
         safe_name = _UNSAFE.sub("_", Path(filename).name)[:255] or "drawing.dxf"
         digest, path = self._store.save(content)
         try:

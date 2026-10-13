@@ -57,12 +57,12 @@ class WorkshopPage:
             self._project_input = ui.input("Project", value=DEFAULT_PROJECT).classes("w-full")
             self._upload = (
                 ui.upload(
-                    label="Upload DXF",
+                    label="Upload DXF or DWG",
                     auto_upload=True,
                     max_files=1,
                     on_upload=self._on_upload,
                 )
-                .props('accept=".dxf"')
+                .props('accept=".dxf,.dwg"')
                 .classes("w-full")
             )
             self._drawing_select = ui.select({}, label="Drawing", on_change=self._on_drawing_change)
