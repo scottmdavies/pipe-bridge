@@ -45,13 +45,20 @@ class GraphBuilder:
             cdn_resources="in_line",
             notebook=False,
         )
+        positions = nx.spring_layout(
+            graph.to_undirected(), seed=42, weight=None, scale=800, iterations=150
+        )
         for node_id, data in graph.nodes(data=True):
             key = (data.get("block_name") or data.get("entity_type") or "").upper()
+            x, y = positions[node_id]
             net.add_node(
                 node_id,
                 label=data["label"],
                 title=f"{data['entity_type']} on {data['layer']}",
                 color=TYPE_COLOURS.get(key, DEFAULT_COLOUR),
+                x=float(x),
+                y=float(y),
+                physics=False,
             )
         for source, target, data in graph.edges(data=True):
             net.add_edge(
@@ -60,4 +67,5 @@ class GraphBuilder:
                 title=data["relation_type"],
                 color=EDGE_COLOURS.get(data["relation_type"], DEFAULT_COLOUR),
             )
+        net.toggle_physics(False)
         return net.generate_html(notebook=False)

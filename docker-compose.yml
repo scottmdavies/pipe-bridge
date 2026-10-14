@@ -17,8 +17,10 @@ services:
       context: .
       target: runtime
     environment:
-      DATABASE_URL: postgresql+psycopg2://workshop:workshop@postgres:5432/workshop
+      DATABASE_URL: postgresql+psycopg2://workshop:workshop@host.docker.internal:5432/workshop
       UPLOAD_DIR: /data/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:8080"
     volumes:

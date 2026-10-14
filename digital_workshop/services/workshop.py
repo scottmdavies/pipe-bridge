@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -16,6 +17,7 @@ from digital_workshop.domain.models import (
 )
 from digital_workshop.services.assets import AssetCreator
 from digital_workshop.services.dwg import DwgConversionError, DwgConverter, is_dwg
+from digital_workshop.services.dxf_normalization import DxfNormalizer
 from digital_workshop.services.dxf_parser import DxfParser
 from digital_workshop.services.graph import GraphBuilder
 from digital_workshop.services.storage import FileStore
@@ -23,6 +25,7 @@ from digital_workshop.services.svg_renderer import SvgRenderer
 
 DEFAULT_PROJECT = "Default Project"
 _UNSAFE = re.compile(r"[^A-Za-z0-9._ -]")
+_LOGGER = logging.getLogger(__name__)
 
 
 class DrawingImportError(Exception):
@@ -52,6 +55,7 @@ class WorkshopService:
         self._graphs = graphs
         self._max_upload_bytes = max_upload_bytes
         self._dwg_converter = dwg_converter
+        self._dxf_normalizer = DxfNormalizer()
 
     def import_drawing(
         self, filename: str, content: bytes, project_name: str = DEFAULT_PROJECT
@@ -72,6 +76,10 @@ class WorkshopService:
                 content = self._dwg_converter.convert(content)
             except DwgConversionError as exc:
                 raise DrawingImportError(str(exc)) from exc
+            result = self._dxf_normalizer.normalize(content)
+            content = result.content
+            if result.applied_rules:
+                _LOGGER.warning("Applied DXF normalizations: %s", ", ".join(result.applied_rules))
         safe_name = _UNSAFE.sub("_", Path(filename).name)[:255] or "drawing.dxf"
         digest, path = self._store.save(content)
         try:

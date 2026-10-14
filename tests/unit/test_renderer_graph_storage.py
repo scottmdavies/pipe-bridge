@@ -56,6 +56,8 @@ def test_graph_build_and_html() -> None:
     assert graph.nodes[1]["label"] == "T-1"
     html = builder.to_html(graph)
     assert "<html" in html and "T-1" in html
+    assert '"physics": false' in html
+    assert '"x": ' in html and '"y": ' in html
 
 
 def test_file_store_is_content_addressed_and_write_once(tmp_path: Path) -> None:
