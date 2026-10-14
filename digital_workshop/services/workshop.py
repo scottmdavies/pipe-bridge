@@ -11,15 +11,18 @@ from digital_workshop.db.repositories import UnitOfWork
 from digital_workshop.domain.models import (
     Asset,
     AssetDetail,
+    AssetObjectSuggestion,
     AssetRequest,
+    CostItem,
     Drawing,
     DrawingObject,
+    Relationship,
 )
-from digital_workshop.services.assets import AssetCreator
+from digital_workshop.services.assets import AssetCreator, AssetValidationError
 from digital_workshop.services.dwg import DwgConversionError, DwgConverter, is_dwg
+from digital_workshop.services.dxf_exporter import DxfExporter, DxfExportError
 from digital_workshop.services.dxf_normalization import DxfNormalizer
 from digital_workshop.services.dxf_parser import DxfParser
-from digital_workshop.services.graph import GraphBuilder
 from digital_workshop.services.storage import FileStore
 from digital_workshop.services.svg_renderer import SvgRenderer
 
@@ -42,7 +45,7 @@ class WorkshopService:
         store: FileStore,
         renderer: SvgRenderer,
         assets: AssetCreator,
-        graphs: GraphBuilder,
+        exporter: DxfExporter,
         max_upload_bytes: int,
         dwg_converter: DwgConverter | None = None,
     ) -> None:
@@ -52,7 +55,7 @@ class WorkshopService:
         self._store = store
         self._renderer = renderer
         self._assets = assets
-        self._graphs = graphs
+        self._exporter = exporter
         self._max_upload_bytes = max_upload_bytes
         self._dwg_converter = dwg_converter
         self._dxf_normalizer = DxfNormalizer()
@@ -115,6 +118,27 @@ class WorkshopService:
         """Create an asset from the selected objects."""
         return self._assets.create(drawing_id, object_ids, request)
 
+    def update_asset_relationships(self, asset_id: int, relationships: list[Relationship]) -> None:
+        """Persist the user's reviewed relationship list for an asset."""
+        try:
+            self._assets.replace_relationships(asset_id, relationships)
+        except ValueError as exc:
+            raise AssetValidationError(str(exc)) from exc
+
+    def update_asset_cost_items(self, asset_id: int, cost_items: list[CostItem]) -> None:
+        """Persist the reviewed, unmarked-up cost schedule for an asset."""
+        self._assets.replace_cost_items(asset_id, cost_items)
+
+    def suggest_asset_additions(
+        self, asset_id: int, tolerance: float
+    ) -> list[AssetObjectSuggestion]:
+        """Find unselected annotations and objects near an asset's selected linework."""
+        return self._assets.suggest_additions(asset_id, tolerance)
+
+    def include_asset_suggestions(self, asset_id: int, object_ids: set[int]) -> None:
+        """Include user-confirmed nearby objects in the asset."""
+        self._assets.include_suggestions(asset_id, object_ids)
+
     def list_assets(self) -> list[Asset]:
         """List all saved assets."""
         with self._uow_factory() as uow:
@@ -125,9 +149,19 @@ class WorkshopService:
         with self._uow_factory() as uow:
             return uow.assets.get_detail(asset_id)
 
-    def asset_graph_html(self, asset_id: int) -> str | None:
-        """Render an asset's relationship graph as PyVis HTML."""
+    def export_asset_dxf(self, asset_id: int) -> tuple[str, bytes] | None:
+        """Export an asset as a new DXF, preserving source block definitions."""
         detail = self.get_asset(asset_id)
-        if detail is None:
+        if detail is None or detail.asset.drawing_id is None:
             return None
-        return self._graphs.to_html(self._graphs.build(detail))
+        drawing = self.get_drawing(detail.asset.drawing_id)
+        if drawing is None:
+            return None
+        filename = _UNSAFE.sub("_", detail.asset.name).strip(" .") or "asset"
+        try:
+            content = self._exporter.export(
+                Path(drawing.stored_path), {obj.handle for obj in detail.objects}
+            )
+        except DxfExportError:
+            raise
+        return f"{filename}.dxf", content

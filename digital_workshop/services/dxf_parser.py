@@ -115,6 +115,7 @@ class DxfParser:
             text=text or None,
             attributes=attributes,
             primitives=tuple(_primitives(entity, scale)),
+            connection_segments=_connection_segments(entity),
         )
 
 
@@ -124,6 +125,43 @@ def _pick_tag(attributes: dict[str, str]) -> str | None:
         if attributes.get(name):
             return attributes[name]
     return next((v for v in attributes.values() if v), None)
+
+
+def _connection_segments(
+    entity: DXFEntity,
+) -> tuple[tuple[tuple[float, float], tuple[float, float]], ...]:
+    """Extract exact XY segments from straight line and polyline geometry."""
+    entity_type = entity.dxftype()
+    if entity_type == "LINE":
+        start = entity.dxf.start
+        end = entity.dxf.end
+        return (((float(start.x), float(start.y)), (float(end.x), float(end.y))),)
+    if entity_type == "LWPOLYLINE":
+        vertices = [(float(x), float(y), float(bulge)) for x, y, bulge in entity.get_points("xyb")]
+        closed = entity.closed
+    elif entity_type == "POLYLINE" and entity.is_2d_polyline:
+        vertices = [
+            (
+                float(vertex.dxf.location.x),
+                float(vertex.dxf.location.y),
+                float(vertex.dxf.get("bulge", 0.0)),
+            )
+            for vertex in entity.vertices
+        ]
+        closed = entity.is_closed
+    else:
+        return ()
+
+    if len(vertices) < 2:
+        return ()
+    segments = []
+    edge_count = len(vertices) if closed else len(vertices) - 1
+    for index in range(edge_count):
+        x1, y1, bulge = vertices[index]
+        x2, y2, _ = vertices[(index + 1) % len(vertices)]
+        if bulge == 0.0 and (x1, y1) != (x2, y2):
+            segments.append(((x1, y1), (x2, y2)))
+    return tuple(segments)
 
 
 def _entity_bbox(entity: DXFEntity) -> BoundingBox | None:

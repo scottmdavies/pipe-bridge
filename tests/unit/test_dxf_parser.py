@@ -1,6 +1,7 @@
 import hashlib
 from pathlib import Path
 
+import ezdxf
 import pytest
 
 from digital_workshop.services.dxf_parser import DxfParseError, DxfParser
@@ -31,6 +32,18 @@ def test_objects_and_attributes(sample_dxf: Path) -> None:
     assert by_label["Note"].entity_type == "MTEXT"
     assert any(p["t"] == "text" for p in by_label["L-001"].primitives)
     assert any(p["t"] == "poly" for p in tank.primitives)
+    pipe_line = next(o for o in parsed.objects if o.entity_type == "LINE" and o.layer == "PIPE")
+    assert pipe_line.connection_segments == (((9.0, 2.5), (12.0, 2.5)),)
+    pipe_path = next(
+        o
+        for o in parsed.objects
+        if o.entity_type == "LWPOLYLINE" and o.layer == "PIPE" and len(o.connection_segments) == 3
+    )
+    assert pipe_path.connection_segments == (
+        ((14.0, 2.0), (17.0, 2.0)),
+        ((17.0, 2.0), (17.0, 3.0)),
+        ((17.0, 3.0), (20.0, 3.0)),
+    )
     assert len(parsed.objects) == 11
 
 
@@ -38,6 +51,20 @@ def test_parsing_never_modifies_source(sample_dxf: Path) -> None:
     before = hashlib.sha256(sample_dxf.read_bytes()).hexdigest()
     DxfParser().parse(sample_dxf)
     assert hashlib.sha256(sample_dxf.read_bytes()).hexdigest() == before
+
+
+def test_extracts_segments_from_legacy_polyline(tmp_path: Path) -> None:
+    path = tmp_path / "legacy-polyline.dxf"
+    document = ezdxf.new("R2018")
+    document.modelspace().add_polyline2d([(1, 2), (4, 2), (4, 7)])
+    document.saveas(path)
+
+    parsed = DxfParser().parse(path)
+
+    assert parsed.objects[0].connection_segments == (
+        ((1.0, 2.0), (4.0, 2.0)),
+        ((4.0, 2.0), (4.0, 7.0)),
+    )
 
 
 def test_invalid_file_raises(tmp_path: Path) -> None:

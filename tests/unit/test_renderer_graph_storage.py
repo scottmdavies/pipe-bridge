@@ -1,14 +1,6 @@
-from datetime import UTC, datetime
 from pathlib import Path
 
-from digital_workshop.domain.models import (
-    Asset,
-    AssetDetail,
-    BoundingBox,
-    DrawingObject,
-    Relationship,
-)
-from digital_workshop.services.graph import GraphBuilder
+from digital_workshop.domain.models import BoundingBox, DrawingObject
 from digital_workshop.services.storage import FileStore
 from digital_workshop.services.svg_renderer import SvgRenderer
 
@@ -44,20 +36,6 @@ def test_svg_marks_selection_hidden_layers_and_escapes() -> None:
 
 def test_svg_without_bbox_still_renders() -> None:
     assert "<svg" in SvgRenderer().render([], None)
-
-
-def test_graph_build_and_html() -> None:
-    asset = Asset(1, "CIP", "", "", "", (), datetime.now(UTC))
-    detail = AssetDetail(asset, OBJECTS, [Relationship(1, 2, "proximity", 1.0)])
-    builder = GraphBuilder()
-    graph = builder.build(detail)
-    assert set(graph.nodes) == {1, 2}
-    assert graph.edges[1, 2]["relation_type"] == "proximity"
-    assert graph.nodes[1]["label"] == "T-1"
-    html = builder.to_html(graph)
-    assert "<html" in html and "T-1" in html
-    assert '"physics": false' in html
-    assert '"x": ' in html and '"y": ' in html
 
 
 def test_file_store_is_content_addressed_and_write_once(tmp_path: Path) -> None:

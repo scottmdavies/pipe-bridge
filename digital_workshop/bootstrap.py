@@ -9,13 +9,9 @@ from digital_workshop.db.repositories import UnitOfWork
 from digital_workshop.db.session import create_db_engine, create_session_factory
 from digital_workshop.services.assets import AssetCreator
 from digital_workshop.services.dwg import DwgConverter
+from digital_workshop.services.dxf_exporter import DxfExporter
 from digital_workshop.services.dxf_parser import DxfParser
-from digital_workshop.services.graph import GraphBuilder
-from digital_workshop.services.relationships import (
-    LayerStrategy,
-    ProximityStrategy,
-    RelationshipEngine,
-)
+from digital_workshop.services.relationships import PipeConnectionStrategy, RelationshipEngine
 from digital_workshop.services.selection import SelectionService
 from digital_workshop.services.storage import FileStore
 from digital_workshop.services.svg_renderer import SvgRenderer
@@ -33,7 +29,7 @@ def build_services(
         return UnitOfWork(session_factory)
 
     relationship_engine = RelationshipEngine(
-        [ProximityStrategy(settings.proximity_threshold), LayerStrategy()]
+        [PipeConnectionStrategy(settings.connection_tolerance)]
     )
     workshop = WorkshopService(
         uow_factory=uow_factory,
@@ -41,7 +37,7 @@ def build_services(
         store=FileStore(settings.upload_dir),
         renderer=SvgRenderer(),
         assets=AssetCreator(uow_factory, relationship_engine),
-        graphs=GraphBuilder(),
+        exporter=DxfExporter(),
         max_upload_bytes=settings.max_upload_bytes,
         dwg_converter=DwgConverter(),
     )

@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -62,6 +74,7 @@ class DXFObjectRecord(Base):
     attributes: Mapped[dict[str, str]] = mapped_column(JSON)
     bbox: Mapped[list[float]] = mapped_column(JSON)
     primitives: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    connection_segments: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
 
 
 class AssetRecord(Base):
@@ -83,6 +96,9 @@ class AssetRecord(Base):
     )
     relationships: Mapped[list[RelationshipRecord]] = relationship(
         cascade="all, delete-orphan", order_by="RelationshipRecord.id"
+    )
+    cost_items: Mapped[list[CostItemRecord]] = relationship(
+        cascade="all, delete-orphan", order_by="CostItemRecord.id"
     )
 
 
@@ -108,3 +124,20 @@ class RelationshipRecord(Base):
     target_object_id: Mapped[int] = mapped_column(ForeignKey("dxf_objects.id"))
     relation_type: Mapped[str] = mapped_column(String(64))
     distance: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class CostItemRecord(Base):
+    """Table ``cost_items`` containing base-cost schedule rows for an asset."""
+
+    __tablename__ = "cost_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"), index=True)
+    dxf_object_id: Mapped[int | None] = mapped_column(ForeignKey("dxf_objects.id"), nullable=True)
+    category: Mapped[str] = mapped_column(String(32))
+    description: Mapped[str] = mapped_column(Text)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3))
+    unit_cost: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    source: Mapped[str] = mapped_column(Text, default="")
+    basis_date: Mapped[date | None] = mapped_column(Date, nullable=True)

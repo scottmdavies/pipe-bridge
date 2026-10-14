@@ -9,7 +9,8 @@ from nicegui import ui
 from nicegui.elements.upload_files import SmallFileUpload
 from nicegui.testing import User
 
-from digital_workshop.ui.pages import WorkshopPage, register_graph_route, register_pages
+from digital_workshop.domain.models import AssetRequest
+from digital_workshop.ui.pages import WorkshopPage, register_pages
 
 pytestmark = pytest.mark.nicegui_main_file("")
 
@@ -18,7 +19,6 @@ pytestmark = pytest.mark.nicegui_main_file("")
 def pages(services) -> list[WorkshopPage]:
     workshop, selection = services
     created: list[WorkshopPage] = []
-    register_graph_route(workshop)
 
     @ui.page("/")
     def index() -> None:
@@ -81,10 +81,23 @@ async def test_upload_select_and_save(user: User, pages, sample_dxf: Path) -> No
     assert asset.customer_need == "Reduce Water Usage"
     assert asset.tags == ("cip", "water")
     assert len(detail.objects) == len(state.selected)
+    page._show_asset_in_viewer(asset.id)
+    assert page._tabs.value == page._viewer_tab
+    user.find("Costs").click()
+    await user.should_see("Cost schedule")
+    await user.should_see("Apply costs")
 
-    response = await user.http_client.get(f"/assets/{asset.id}/graph")
-    assert response.status_code == 200 and "T-101" in response.text
-    assert (await user.http_client.get("/assets/999/graph")).status_code == 404
+    pipe = next(obj for obj in state.objects if obj.entity_type == "LINE" and obj.layer == "PIPE")
+    pipe_asset = workshop.create_asset(
+        state.drawing.id,
+        frozenset({pipe.id}),
+        AssetRequest("Pipe-only review"),
+    )
+    page.show_asset(pipe_asset.asset.id)
+    user.find("Assets").click()
+    user.find("Find nearby").click()
+    await user.should_see("L-001")
+    assert pipe.id in {obj.id for obj in workshop.get_asset(pipe_asset.asset.id).objects}
 
 
 async def test_rejects_invalid_upload(user: User, pages, tmp_path: Path) -> None:

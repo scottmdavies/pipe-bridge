@@ -18,12 +18,14 @@ class Settings:
         upload_dir: Directory where uploaded DXF files are stored (write-once copies).
         max_upload_bytes: Maximum accepted DXF upload size.
         proximity_threshold: Maximum bounding-box gap (drawing units) for a proximity relationship.
+        connection_tolerance: Maximum endpoint gap (drawing units) for a connection candidate.
     """
 
     database_url: str = DEFAULT_DATABASE_URL
     upload_dir: Path = Path("var/uploads")
     max_upload_bytes: int = 50 * 1024 * 1024
     proximity_threshold: float = 50.0
+    connection_tolerance: float = 1.0
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -33,4 +35,5 @@ class Settings:
             upload_dir=Path(os.environ.get("UPLOAD_DIR", "var/uploads")),
             max_upload_bytes=int(os.environ.get("MAX_UPLOAD_BYTES", 50 * 1024 * 1024)),
             proximity_threshold=float(os.environ.get("PROXIMITY_THRESHOLD", 50.0)),
+            connection_tolerance=float(os.environ.get("CONNECTION_TOLERANCE", 1.0)),
         )

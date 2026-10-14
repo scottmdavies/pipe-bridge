@@ -3,20 +3,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from fastapi import HTTPException
-from fastapi.responses import HTMLResponse
 from nicegui import app, context, events, ui
 
-from digital_workshop.domain.models import AssetRequest, Drawing, DrawingObject
+from digital_workshop.domain.models import (
+    AssetObjectSuggestion,
+    AssetRequest,
+    CostItem,
+    Drawing,
+    DrawingObject,
+    Relationship,
+)
 from digital_workshop.services.assets import AssetValidationError
+from digital_workshop.services.dxf_exporter import DxfExportError
+from digital_workshop.services.relationships import (
+    CONFIRMED_CONNECTION,
+    CONNECTION_CANDIDATE,
+)
 from digital_workshop.services.selection import SelectionService
 from digital_workshop.services.workshop import DEFAULT_PROJECT, DrawingImportError, WorkshopService
 
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_URL = "/workshop-static"
-GRAPH_URL = "/assets/{asset_id}/graph"
 
 
 @dataclass
@@ -38,6 +49,13 @@ class WorkshopPage:
         self._selection = selection
         self._state = ViewerState()
         self._client = context.client
+        self._asset_relationship_rows: list[dict] = []
+        self._relationship_asset_id: int | None = None
+        self._relationship_objects: dict[int, str] = {}
+        self._cost_asset_id: int | None = None
+        self._cost_object_options: dict[int, str] = {}
+        self._cost_rows: list[dict] = []
+        self._suggestion_asset_id: int | None = None
 
     @property
     def state(self) -> ViewerState:
@@ -72,14 +90,17 @@ class WorkshopPage:
             ui.label("Layers").classes("text-subtitle2")
             self._layers = ui.column().classes("gap-0")
 
-        with ui.tabs().classes("w-full") as tabs:
-            viewer_tab = ui.tab("Viewer")
+        with ui.tabs().classes("w-full") as self._tabs:
+            self._viewer_tab = ui.tab("Viewer")
             assets_tab = ui.tab("Assets")
-        with ui.tab_panels(tabs, value=viewer_tab).classes("w-full"):
-            with ui.tab_panel(viewer_tab):
+            costs_tab = ui.tab("Costs")
+        with ui.tab_panels(self._tabs, value=self._viewer_tab).classes("w-full"):
+            with ui.tab_panel(self._viewer_tab):
                 self._build_viewer()
             with ui.tab_panel(assets_tab):
                 self._build_assets()
+            with ui.tab_panel(costs_tab):
+                self._build_cost_schedule()
 
         ui.on("dxf_click", self._on_click)
         ui.on("dxf_box", self._on_box)
@@ -111,8 +132,26 @@ class WorkshopPage:
             self._asset_list = ui.column().classes("w-1/4")
             with ui.column().classes("w-3/4"):
                 self._asset_info = ui.column().classes("gap-0")
-                self._graph = ui.element("iframe").props("sandbox=allow-scripts").classes("w-full")
-                self._graph.style("height: 500px; border: 1px solid #ccc")
+                self._relationship_editor = ui.column().classes("w-full")
+                ui.separator()
+                ui.label("Nearby objects")
+                with ui.row().classes("items-center gap-2"):
+                    self._suggestion_tolerance = ui.number(
+                        "Radius", value=10.0, min=0, step=1
+                    ).classes("w-32")
+                    ui.button("Find nearby", on_click=self._find_asset_suggestions).props("dense")
+                self._suggestions_area = ui.column().classes("w-full")
+
+    def _build_cost_schedule(self) -> None:
+        ui.label("Cost schedule").classes("text-h6")
+        with ui.row().classes("w-full items-center gap-2"):
+            self._cost_asset_select = ui.select(
+                {}, label="Asset", on_change=self._on_cost_asset_change
+            ).classes("w-80")
+            ui.button("Add cost line", on_click=self._add_cost_row).props("dense")
+            ui.button("Apply costs", on_click=self._save_cost_schedule).props("dense color=primary")
+        self._cost_total = ui.label("Base cost total: -").classes("text-subtitle2")
+        self._cost_editor = ui.column().classes("w-full")
 
     async def _attach_viewer(self) -> None:
         await self._client.run_javascript("DigitalWorkshop.attach()")
@@ -292,19 +331,35 @@ class WorkshopPage:
         self.show_asset(detail.asset.id)
 
     def _refresh_assets(self) -> None:
+        assets = self._workshop.list_assets()
+        options = {asset.id: asset.name for asset in assets}
         self._asset_list.clear()
         with self._asset_list:
-            for asset in self._workshop.list_assets():
+            for asset in assets:
                 ui.button(asset.name, on_click=lambda _, a=asset.id: self.show_asset(a)).props(
                     "flat no-caps align=left"
                 ).classes("w-full")
+        self._cost_asset_select.set_options(options)
+        if self._cost_asset_id not in options:
+            self._cost_asset_id = None
+            self._cost_asset_select.value = None
 
     def show_asset(self, asset_id: int) -> None:
-        """Display an asset's details and relationship graph."""
+        """Display an asset and select its member objects in the drawing viewer."""
         detail = self._workshop.get_asset(asset_id)
         if detail is None:
             return
         asset = detail.asset
+        drawing = self._workshop.get_drawing(asset.drawing_id) if asset.drawing_id else None
+        if drawing is not None:
+            if self._state.drawing is None or self._state.drawing.id != drawing.id:
+                self.load_drawing(drawing)
+            else:
+                self._state.hidden_layers = frozenset()
+                self._show_layers(drawing)
+                self._client.run_javascript("DigitalWorkshop.setHiddenLayers([])")
+            self._state.selected = frozenset(obj.id for obj in detail.objects if obj.id is not None)
+            self._push_selection()
         self._asset_info.clear()
         with self._asset_info:
             ui.label(asset.name).classes("text-h6")
@@ -313,25 +368,320 @@ class WorkshopPage:
             ui.label(f"Tags: {', '.join(asset.tags) or '-'}")
             ui.label(asset.description)
             ui.label(f"{len(detail.objects)} objects, {len(detail.relationships)} relationships")
-        self._graph.props(f"src={GRAPH_URL.format(asset_id=int(asset_id))}")
-        self._graph.update()
+            ui.button(
+                "Show in drawing", on_click=lambda: self._show_asset_in_viewer(asset_id)
+            ).props("dense")
+            ui.button("Export DXF", on_click=lambda: self._export_asset_dxf(asset_id)).props(
+                "dense"
+            )
+        self._render_relationship_editor(detail)
+        self._cost_asset_select.value = asset_id
+        self._load_cost_schedule(asset_id)
+        self._suggestion_asset_id = asset_id
 
+    def _show_asset_in_viewer(self, asset_id: int) -> None:
+        self.show_asset(asset_id)
+        self._tabs.value = self._viewer_tab
 
-def register_graph_route(workshop: WorkshopService) -> None:
-    """Serve each asset's PyVis relationship graph as an HTML document (for the iframe)."""
+    def _export_asset_dxf(self, asset_id: int) -> None:
+        try:
+            export = self._workshop.export_asset_dxf(asset_id)
+        except DxfExportError as exc:
+            ui.notify(str(exc), type="negative")
+            return
+        if export is None:
+            ui.notify("Asset or source drawing not found.", type="negative")
+            return
+        filename, content = export
+        ui.download(content, filename, "application/dxf")
 
-    @app.get("/assets/{asset_id}/graph")
-    def asset_graph(asset_id: int) -> HTMLResponse:
-        graph_html = workshop.asset_graph_html(asset_id)
-        if graph_html is None:
-            raise HTTPException(status_code=404, detail="Unknown asset")
-        return HTMLResponse(graph_html)
+    def _render_relationship_editor(self, detail) -> None:
+        self._relationship_asset_id = detail.asset.id
+        self._relationship_objects = {
+            obj.id: f"#{obj.id} {obj.label} [{obj.entity_type} / {obj.layer}]"
+            for obj in detail.objects
+            if obj.id is not None
+        }
+        self._relationship_editor.clear()
+        self._asset_relationship_rows = []
+        with self._relationship_editor:
+            ui.label("Connections").classes("text-subtitle2")
+            with ui.row().classes("gap-2"):
+                ui.button("Add connection", on_click=self._add_relationship_row).props("dense")
+                ui.button("Save connections", on_click=self._save_relationships).props(
+                    "dense color=primary"
+                )
+            for relationship in detail.relationships:
+                self._add_relationship_row(relationship)
+
+    def _add_relationship_row(self, relationship: Relationship | None = None) -> None:
+        object_ids = list(self._relationship_objects)
+        source_id = (
+            relationship.source_id if relationship else (object_ids[0] if object_ids else None)
+        )
+        target_id = (
+            relationship.target_id
+            if relationship
+            else (object_ids[1] if len(object_ids) > 1 else None)
+        )
+        relation_type = relationship.relation_type if relationship else CONFIRMED_CONNECTION
+        relation_options = {
+            CONNECTION_CANDIDATE: "Candidate",
+            CONFIRMED_CONNECTION: "Confirmed",
+        }
+        if relation_type not in relation_options:
+            relation_options[relation_type] = relation_type.replace("_", " ").title()
+        row_data: dict = {"distance": relationship.distance if relationship else None}
+        with self._relationship_editor:
+            with ui.row().classes("w-full items-center no-wrap gap-2") as row_element:
+                row_data["source"] = ui.select(
+                    self._relationship_objects, value=source_id, label="From"
+                ).classes("col")
+                row_data["relation"] = ui.select(
+                    relation_options, value=relation_type, label="Type"
+                ).classes("col")
+                row_data["target"] = ui.select(
+                    self._relationship_objects, value=target_id, label="To"
+                ).classes("col")
+                ui.button(
+                    icon="delete", on_click=lambda: self._remove_relationship_row(row_data)
+                ).props("flat round dense aria-label=Remove connection")
+        row_data["element"] = row_element
+        self._asset_relationship_rows.append(row_data)
+
+    def _remove_relationship_row(self, row_data: dict) -> None:
+        row_data["element"].delete()
+        self._asset_relationship_rows.remove(row_data)
+
+    def _save_relationships(self) -> None:
+        if self._relationship_asset_id is None:
+            return
+        relationships = []
+        for row in self._asset_relationship_rows:
+            source_id, target_id = row["source"].value, row["target"].value
+            if source_id is None or target_id is None or source_id == target_id:
+                ui.notify("Choose two different objects for each connection.", type="warning")
+                return
+            relationships.append(
+                Relationship(
+                    int(source_id),
+                    int(target_id),
+                    row["relation"].value,
+                    row["distance"],
+                )
+            )
+        asset_id = self._relationship_asset_id
+        try:
+            self._workshop.update_asset_relationships(asset_id, relationships)
+        except AssetValidationError as exc:
+            ui.notify(str(exc), type="negative")
+            return
+        self.show_asset(asset_id)
+        ui.notify("Connections saved", type="positive")
+
+    def _on_cost_asset_change(self, e: events.ValueChangeEventArguments) -> None:
+        if e.value is not None:
+            self._load_cost_schedule(int(e.value))
+
+    def _load_cost_schedule(self, asset_id: int) -> None:
+        detail = self._workshop.get_asset(asset_id)
+        if detail is None:
+            return
+        self._cost_asset_id = asset_id
+        self._cost_object_options = {
+            obj.id: f"#{obj.id} {obj.label}" for obj in detail.objects if obj.id is not None
+        }
+        self._cost_editor.clear()
+        self._cost_rows = []
+        for cost_item in detail.cost_items:
+            self._add_cost_row(cost_item)
+        totals: dict[str, Decimal] = {}
+        for item in detail.cost_items:
+            totals[item.currency] = totals.get(item.currency, Decimal("0")) + item.total
+        summary = ", ".join(
+            f"{currency} {amount:,.2f}" for currency, amount in sorted(totals.items())
+        )
+        self._cost_total.set_text(f"Base cost total: {summary or '-'}")
+
+    def _add_cost_row(self, item: CostItem | None = None) -> None:
+        categories = {
+            "equipment": "Equipment",
+            "pipework": "Pipework lump sum",
+            "electrical": "Electrical lump sum",
+            "ma": "M&A lump sum",
+        }
+        category = item.category if item else "equipment"
+        row: dict = {}
+        with self._cost_editor:
+            with ui.row().classes("w-full items-center gap-2") as element:
+                row["category"] = ui.select(
+                    categories,
+                    value=category,
+                    label="Category",
+                    on_change=lambda e, current=row: current["object"].set_visibility(
+                        e.value == "equipment"
+                    ),
+                ).classes("w-40")
+                row["object"] = ui.select(
+                    self._cost_object_options,
+                    value=item.object_id if item else None,
+                    label="Equipment",
+                ).classes("w-48")
+                row["object"].set_visibility(category == "equipment")
+                row["description"] = ui.input(
+                    "Description", value=item.description if item else ""
+                ).classes("w-48")
+                row["quantity"] = ui.number(
+                    "Qty",
+                    value=float(item.quantity) if item else 1,
+                    min=0.001,
+                    step=0.001,
+                ).classes("w-24")
+                row["unit_cost"] = ui.number(
+                    "Unit cost",
+                    value=float(item.unit_cost) if item else 0,
+                    min=0,
+                    step=0.01,
+                ).classes("w-32")
+                row["currency"] = ui.input(
+                    "Currency", value=item.currency if item else "GBP"
+                ).classes("w-24")
+                row["source"] = ui.input("Source", value=item.source if item else "").classes(
+                    "w-40"
+                )
+                row["basis_date"] = (
+                    ui.input(
+                        "Cost date",
+                        value=item.basis_date.isoformat() if item and item.basis_date else "",
+                    )
+                    .props("type=date")
+                    .classes("w-40")
+                )
+                ui.button(icon="delete", on_click=lambda: self._remove_cost_row(row)).props(
+                    "flat round dense aria-label=Remove cost line"
+                )
+        row["element"] = element
+        self._cost_rows.append(row)
+
+    def _remove_cost_row(self, row: dict) -> None:
+        row["element"].delete()
+        self._cost_rows.remove(row)
+
+    def _save_cost_schedule(self) -> None:
+        if self._cost_asset_id is None:
+            return
+        items = []
+        try:
+            for row in self._cost_rows:
+                category = row["category"].value
+                description = (row["description"].value or "").strip()
+                if not description:
+                    ui.notify("Each cost line needs a description.", type="warning")
+                    return
+                basis_date_text = row["basis_date"].value
+                items.append(
+                    CostItem(
+                        category=category,
+                        description=description,
+                        quantity=Decimal(str(row["quantity"].value)),
+                        unit_cost=Decimal(str(row["unit_cost"].value)),
+                        currency=(row["currency"].value or "").strip().upper(),
+                        object_id=(
+                            int(row["object"].value)
+                            if category == "equipment" and row["object"].value is not None
+                            else None
+                        ),
+                        source=row["source"].value or "",
+                        basis_date=date.fromisoformat(basis_date_text) if basis_date_text else None,
+                    )
+                )
+            self._workshop.update_asset_cost_items(self._cost_asset_id, items)
+        except (AssetValidationError, InvalidOperation, ValueError) as exc:
+            ui.notify(str(exc), type="negative")
+            return
+        asset_id = self._cost_asset_id
+        self._load_cost_schedule(asset_id)
+        ui.notify("Cost schedule saved", type="positive")
+
+    def _find_asset_suggestions(self) -> None:
+        if self._suggestion_asset_id is None:
+            return
+        try:
+            suggestions = self._workshop.suggest_asset_additions(
+                self._suggestion_asset_id, float(self._suggestion_tolerance.value or 0)
+            )
+        except ValueError as exc:
+            ui.notify(str(exc), type="warning")
+            return
+        self._suggestions_area.clear()
+        if not suggestions:
+            with self._suggestions_area:
+                ui.label("No nearby objects found.").classes("text-caption")
+            return
+
+        rows = [self._suggestion_row(suggestion) for suggestion in suggestions]
+        with self._suggestions_area:
+            self._suggestion_table = ui.table(
+                rows=rows,
+                columns=[
+                    {"name": "label", "label": "Object", "field": "label", "sortable": True},
+                    {"name": "type", "label": "Type", "field": "type", "sortable": True},
+                    {"name": "layer", "label": "Layer", "field": "layer", "sortable": True},
+                    {
+                        "name": "distance",
+                        "label": "Gap",
+                        "field": "distance",
+                        "sortable": True,
+                    },
+                    {"name": "details", "label": "Attributes / suggestion", "field": "details"},
+                ],
+                row_key="id",
+                selection="multiple",
+            ).classes("w-full")
+            ui.button("Include selected objects", on_click=self._include_asset_suggestions).props(
+                "dense"
+            )
+
+    @staticmethod
+    def _suggestion_row(suggestion: AssetObjectSuggestion) -> dict:
+        obj = suggestion.object
+        attribute_text = "; ".join(
+            f"{key.rsplit('.', 1)[-1].rstrip(')')}: {value}"
+            for key, value in obj.attributes.items()
+            if value
+        )
+        return {
+            "id": obj.id,
+            "label": obj.label,
+            "type": obj.entity_type,
+            "layer": obj.layer,
+            "distance": suggestion.distance,
+            "details": attribute_text or suggestion.reason,
+        }
+
+    def _include_asset_suggestions(self) -> None:
+        if self._suggestion_asset_id is None:
+            return
+        object_ids = {
+            int(row["id"]) for row in (self._suggestion_table.selected or []) if row.get("id")
+        }
+        if not object_ids:
+            ui.notify("Select at least one suggestion.", type="warning")
+            return
+        asset_id = self._suggestion_asset_id
+        try:
+            self._workshop.include_asset_suggestions(asset_id, object_ids)
+        except AssetValidationError as exc:
+            ui.notify(str(exc), type="negative")
+            return
+        self.show_asset(asset_id)
+        self._find_asset_suggestions()
+        ui.notify(f"Added {len(object_ids)} object(s) to the asset", type="positive")
 
 
 def register_pages(workshop: WorkshopService, selection: SelectionService) -> None:
-    """Register the workshop page and graph routes using the injected services."""
+    """Register the workshop page using the injected services."""
     app.add_static_files(STATIC_URL, str(STATIC_DIR))
-    register_graph_route(workshop)
 
     @ui.page("/")
     def index() -> None:

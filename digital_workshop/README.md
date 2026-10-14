@@ -15,7 +15,9 @@ python -m digital_workshop               # http://localhost:8080
 
 Settings (environment): `DATABASE_URL`, `UPLOAD_DIR` (default `var/uploads`),
 `MAX_UPLOAD_BYTES`, `PROXIMITY_THRESHOLD` (bounding-box gap, in drawing units, below which
-two objects are related; default 50 - tune to the drawing units).
+`MAX_UPLOAD_BYTES`, `CONNECTION_TOLERANCE` (maximum pipe-endpoint gap, in drawing units;
+default 1.0), and `PROXIMITY_THRESHOLD` (legacy proximity strategy setting; not used for
+default asset relationships).
 
 ## Develop
 
@@ -34,7 +36,8 @@ pytest            # fails under 85% coverage
 ## Layout
 
 `ui/` NiceGUI pages (no business logic) -> `services/` (DXF parser, SVG renderer, selection,
-relationship engine, asset creator, graph builder, `WorkshopService` facade) ->
+relationship engine, asset creator, `WorkshopService` facade) ->
 `db/` repositories + unit of work (SQLAlchemy 2.0) -> PostgreSQL. `bootstrap.py` wires it all.
-Relationships are proximity- and layer-based (`services/relationships.py`); a true
-connectivity strategy can be added behind the same `RelationshipStrategy` protocol.
+Default asset relationships are undirected XY connection candidates between straight
+line/polyline segments (`services/relationships.py`). Proximity and layer strategies remain
+available as separate contextual heuristics; flow direction is not inferred.

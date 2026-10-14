@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from digital_workshop.db.orm import (
     AssetObjectRecord,
     AssetRecord,
+    CostItemRecord,
     DrawingRecord,
     DXFObjectRecord,
     ProjectRecord,
@@ -22,6 +23,7 @@ from digital_workshop.domain.models import (
     AssetDetail,
     AssetRequest,
     BoundingBox,
+    CostItem,
     Drawing,
     DrawingMetadata,
     DrawingObject,
@@ -95,6 +97,9 @@ class DrawingRepository:
                 attributes=o.attributes,
                 bbox=o.bbox.as_list(),
                 primitives=list(o.primitives),
+                connection_segments=[
+                    [list(start), list(end)] for start, end in o.connection_segments
+                ],
             )
             for o in parsed.objects
         )
@@ -179,6 +184,91 @@ class AssetRepository:
         self._session.flush()
         return _asset(record)
 
+    def replace_relationships(self, asset_id: int, relationships: Sequence[Relationship]) -> bool:
+        """Replace an asset's relationships after validating object membership."""
+        record = self._session.get(AssetRecord, asset_id)
+        if record is None:
+            return False
+        object_ids = {item.dxf_object_id for item in record.objects}
+        if any(
+            relationship.source_id == relationship.target_id
+            or relationship.source_id not in object_ids
+            or relationship.target_id not in object_ids
+            for relationship in relationships
+        ):
+            raise ValueError("Relationships must connect two different objects in this asset.")
+        record.relationships = [
+            RelationshipRecord(
+                source_object_id=relationship.source_id,
+                target_object_id=relationship.target_id,
+                relation_type=relationship.relation_type,
+                distance=relationship.distance,
+            )
+            for relationship in relationships
+        ]
+        self._session.flush()
+        return True
+
+    def add_objects(self, asset_id: int, object_ids: set[int]) -> bool:
+        """Add drawing objects to an asset after validating drawing ownership."""
+        record = self._session.get(AssetRecord, asset_id)
+        if record is None:
+            return False
+        existing_ids = {item.dxf_object_id for item in record.objects}
+        additions = object_ids - existing_ids
+        if not additions:
+            return True
+        valid_ids = set(
+            self._session.scalars(
+                select(DXFObjectRecord.id).where(
+                    DXFObjectRecord.drawing_id == record.drawing_id,
+                    DXFObjectRecord.id.in_(additions),
+                )
+            )
+        )
+        if valid_ids != additions:
+            raise ValueError("Suggested objects must belong to the asset's drawing.")
+        record.objects.extend(AssetObjectRecord(dxf_object_id=object_id) for object_id in additions)
+        self._session.flush()
+        return True
+
+    def replace_cost_items(self, asset_id: int, cost_items: Sequence[CostItem]) -> bool:
+        """Replace an asset's cost schedule after validating linked equipment objects."""
+        record = self._session.get(AssetRecord, asset_id)
+        if record is None:
+            return False
+        object_ids = {item.dxf_object_id for item in record.objects}
+        categories = {"equipment", "pipework", "electrical", "ma"}
+        rows = []
+        for item in cost_items:
+            currency = item.currency.strip().upper()
+            if item.category not in categories:
+                raise ValueError(f"Unsupported cost category: {item.category}.")
+            if item.category == "equipment":
+                if item.object_id not in object_ids:
+                    raise ValueError("Equipment costs must reference an object in this asset.")
+            elif item.object_id is not None:
+                raise ValueError("Scope lump sums cannot reference a single drawing object.")
+            if item.quantity <= 0 or item.unit_cost < 0:
+                raise ValueError("Cost quantity must be positive and unit cost cannot be negative.")
+            if len(currency) != 3 or not currency.isalpha():
+                raise ValueError("Currency must be a three-letter code.")
+            rows.append(
+                CostItemRecord(
+                    dxf_object_id=item.object_id,
+                    category=item.category,
+                    description=item.description.strip(),
+                    quantity=item.quantity,
+                    unit_cost=item.unit_cost,
+                    currency=currency,
+                    source=item.source.strip(),
+                    basis_date=item.basis_date,
+                )
+            )
+        record.cost_items = rows
+        self._session.flush()
+        return True
+
     def list(self) -> list[Asset]:
         """List all assets, newest first."""
         stmt = select(AssetRecord).order_by(AssetRecord.id.desc())
@@ -198,7 +288,23 @@ class AssetRepository:
             Relationship(r.source_object_id, r.target_object_id, r.relation_type, r.distance)
             for r in record.relationships
         ]
-        return AssetDetail(asset=_asset(record), objects=objects, relationships=relationships)
+        costs = [
+            CostItem(
+                category=r.category,
+                description=r.description,
+                quantity=r.quantity,
+                unit_cost=r.unit_cost,
+                currency=r.currency,
+                object_id=r.dxf_object_id,
+                source=r.source,
+                basis_date=r.basis_date,
+                id=r.id,
+            )
+            for r in record.cost_items
+        ]
+        return AssetDetail(
+            asset=_asset(record), objects=objects, relationships=relationships, cost_items=costs
+        )
 
 
 class UnitOfWork:
@@ -276,6 +382,13 @@ def _object(r: DXFObjectRecord) -> DrawingObject:
         text=r.text,
         attributes=dict(r.attributes),
         primitives=tuple(r.primitives),
+        connection_segments=tuple(
+            (
+                (float(segment[0][0]), float(segment[0][1])),
+                (float(segment[1][0]), float(segment[1][1])),
+            )
+            for segment in (r.connection_segments or [])
+        ),
     )
     return replace(base, id=r.id)
 

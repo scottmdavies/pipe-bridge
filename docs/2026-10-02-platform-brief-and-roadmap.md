@@ -188,3 +188,19 @@ Approach and dependencies:
 - Roadmap: merges with Phase 3 (recipes and scheduling); the sizing service is the first consumer, so build a **cooker case study** as the reference test with hand-checked numbers.
 
 Revised priority: 1a–1c DXF extraction → 1d round-trip edit → Phase 3 scheduling + sizing (cooker case) → calculators → CAD/costing.
+
+## 8. Near-term asset workflow: DXF export, then cost schedule
+
+### Step 1: Export a productised asset as a new DXF
+
+- Generate a separate DXF from the asset selection, preserving original block inserts, symbol geometry, attributes and layers where the source format permits. Include the reviewed connections, with direction only on user-confirmed links.
+- Retain the uploaded source alongside any normalized/interchange DXF so DWG conversion does not discard the original drawing. Never overwrite the source; export a new file for review and downstream use.
+- Validate exported entities and component identity against the source, including a representative DWG conversion, before claiming round-trip fidelity. Record unsupported proxy/custom entities rather than silently omitting them.
+
+### Step 2: Add an asset delivered-cost schedule
+
+- Attach equipment cost items to selected drawing objects; represent pipework, electrical and M&A as asset-level lump-sum scopes unless a finer breakdown is available.
+- Store base delivered amounts separately from downstream markups, with currency, cost basis/date and source for traceability. Do not assign cost to every relationship edge.
+- Roll up equipment and scope costs to an asset total that later estimating/proposal tools can consume without changing the reviewed connection graph.
+
+STEP references and 3D placement can follow as a separate extension: map a component or cost item to a STEP artifact and placement while retaining its source-DXF identity. This is a future capability, not a dependency for the two steps above.

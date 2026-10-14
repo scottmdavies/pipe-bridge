@@ -53,7 +53,10 @@ def sample_dxf(tmp_path: Path) -> Path:
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return Settings(
-        database_url="sqlite://", upload_dir=tmp_path / "uploads", proximity_threshold=2.0
+        database_url="sqlite://",
+        upload_dir=tmp_path / "uploads",
+        proximity_threshold=2.0,
+        connection_tolerance=2.1,
     )
 
 

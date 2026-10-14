@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 
@@ -91,6 +92,7 @@ class DrawingObject:
         text: Text content or the tag attribute / first attribute of an ``INSERT``.
         attributes: Block attribute values of an ``INSERT``.
         primitives: Simplified drawable geometry used for SVG rendering.
+        connection_segments: Exact straight XY segments used for topology inference.
         id: Database id, ``None`` until stored.
     """
 
@@ -102,6 +104,7 @@ class DrawingObject:
     text: str | None = None
     attributes: dict[str, str] = field(default_factory=dict)
     primitives: tuple[dict[str, Any], ...] = ()
+    connection_segments: tuple[tuple[tuple[float, float], tuple[float, float]], ...] = ()
     id: int | None = None
 
     @property
@@ -154,7 +157,7 @@ class Drawing:
 
 @dataclass(frozen=True)
 class Relationship:
-    """Directed relationship between two drawing objects (by database id)."""
+    """Relationship between drawing objects; source order is not flow direction."""
 
     source_id: int
     target_id: int
@@ -194,3 +197,33 @@ class AssetDetail:
     asset: Asset
     objects: list[DrawingObject]
     relationships: list[Relationship]
+    cost_items: list[CostItem] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AssetObjectSuggestion:
+    """An unselected drawing object near linework already included in an asset."""
+
+    object: DrawingObject
+    distance: float
+    reason: str
+
+
+@dataclass(frozen=True)
+class CostItem:
+    """A base-cost schedule line attached to an asset and optionally one object."""
+
+    category: str
+    description: str
+    quantity: Decimal = Decimal("1")
+    unit_cost: Decimal = Decimal("0")
+    currency: str = "GBP"
+    object_id: int | None = None
+    source: str = ""
+    basis_date: date | None = None
+    id: int | None = None
+
+    @property
+    def total(self) -> Decimal:
+        """Unmarked-up extended base cost."""
+        return self.quantity * self.unit_cost
